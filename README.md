@@ -1,2 +1,2 @@
 # Events-App
-University Events App
+Party App
