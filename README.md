@@ -1,4 +1,4 @@
-# University Events Management and Registration System
+# UniEvents
 
 Starter full-stack MVP for:
 - User register/login

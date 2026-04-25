@@ -184,7 +184,7 @@ function App() {
 
   return (
     <main className="container">
-      <h1>University Events Management</h1>
+      <h1>UniEvents</h1>
 
       <section className="panel">
         {!user ? (
