@@ -70,6 +70,14 @@ export const api = {
     return handleResponse(response);
   },
 
+  unregisterFromEvent: async (eventId, token) => {
+    const response = await fetch(`${API_BASE_URL}/events/${eventId}/register`, {
+      method: "DELETE",
+      headers: buildHeaders(token),
+    });
+    return handleResponse(response);
+  },
+
   getMyRegistrations: async (token) => {
     const response = await fetch(`${API_BASE_URL}/me/registrations`, {
       headers: buildHeaders(token),

@@ -38,6 +38,29 @@ const registerForEvent = async (req, res) => {
   }
 };
 
+const unregisterFromEvent = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    const registration = await Registration.findOneAndDelete({
+      eventId,
+      studentId: req.user._id,
+    });
+
+    if (!registration) {
+      return res.status(404).json({ message: "You are not registered for this event." });
+    }
+
+    return res.status(200).json({ message: "Unregistered from event." });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to unregister from event." });
+  }
+};
+
 const getMyRegistrations = async (req, res) => {
   try {
     const registrations = await Registration.find({ studentId: req.user._id })
@@ -86,4 +109,4 @@ const getEventAttendees = async (req, res) => {
   }
 };
 
-module.exports = { registerForEvent, getMyRegistrations, getEventAttendees };
+module.exports = { registerForEvent, unregisterFromEvent, getMyRegistrations, getEventAttendees };

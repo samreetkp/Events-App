@@ -24,7 +24,7 @@
 
 .nav-link-button {
   text-decoration: none;
-  background: #000000;
+  background: #2f2f2f;
   color: #cfb87c;
   border: 1px solid #cfb87c;
   border-radius: 8px;
@@ -81,7 +81,7 @@ select:focus {
 
 button {
   border: none;
-  background: #000000;
+  background: #2f2f2f;
   color: #cfb87c;
   cursor: pointer;
   font-weight: 600;
@@ -111,14 +111,14 @@ button:disabled {
 }
 
 .danger-button {
-  background: #000000;
-  color: #ffffff;
+  background: #ffffff;
+  color: #000000;
   margin-top: 0.5rem;
   border: 1px solid #cfb87c;
 }
 
 .danger-button:hover:not(:disabled) {
-  background: #ffffff;
+  background: #cfb87c;
   color: #000000;
 }
 

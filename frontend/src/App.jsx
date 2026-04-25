@@ -172,6 +172,20 @@ function App() {
     }
   };
 
+  const handleUnregisterFromEvent = async (eventId) => {
+    clearFeedback();
+    setLoading(true);
+    try {
+      await api.unregisterFromEvent(eventId, token);
+      setMessage("Unregistered from event.");
+      await Promise.all([loadEvents(), loadMyRegistrations(token)]);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDeleteEvent = async (eventId) => {
     const confirmed = window.confirm("Are you sure you want to delete this event?");
     if (!confirmed) return;
@@ -396,9 +410,6 @@ function App() {
       <section className="panel">
         <div className="row-between">
           <h2>Upcoming Events</h2>
-          <button className="secondary-button" onClick={loadEvents}>
-            Refresh
-          </button>
         </div>
         {upcomingEvents.length === 0 ? (
           <p>No upcoming events yet.</p>
@@ -432,12 +443,20 @@ function App() {
                     <strong>Spots Remaining:</strong> {eventItem.spotsRemaining}
                   </p>
                   {isStudent && (
-                    <button
-                      disabled={loading || isRegistered || isFull}
-                      onClick={() => handleRegisterForEvent(eventItem._id)}
-                    >
-                      {isRegistered ? "Already Registered" : isFull ? "Full" : "Register"}
-                    </button>
+                    <>
+                      {isRegistered ? (
+                        <button disabled={loading} onClick={() => handleUnregisterFromEvent(eventItem._id)}>
+                          Unregister
+                        </button>
+                      ) : (
+                        <button
+                          disabled={loading || isFull}
+                          onClick={() => handleRegisterForEvent(eventItem._id)}
+                        >
+                          {isFull ? "Full" : "Register"}
+                        </button>
+                      )}
+                    </>
                   )}
                   {isOwnerDepartment && (
                     <>
