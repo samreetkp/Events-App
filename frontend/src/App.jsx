@@ -8,6 +8,7 @@ const initialEventForm = {
   description: "",
   date: "",
   endTime: "",
+  photo: "",
   location: "",
   capacity: 10,
 };
@@ -156,6 +157,20 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEventPhotoChange = (changeEvent) => {
+    const file = changeEvent.target.files?.[0];
+    if (!file) {
+      setEventForm((current) => ({ ...current, photo: "" }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setEventForm((current) => ({ ...current, photo: typeof reader.result === "string" ? reader.result : "" }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleRegisterForEvent = async (eventId) => {
@@ -390,6 +405,8 @@ function App() {
               }
               required
             />
+            <label>Event Photo</label>
+            <input type="file" accept="image/*" onChange={handleEventPhotoChange} />
             <label>Capacity</label>
             <input
               type="number"
@@ -427,6 +444,9 @@ function App() {
               return (
                 <article className="event-card" key={eventItem._id}>
                   <h3>{eventItem.title}</h3>
+                  {eventItem.photo && (
+                    <img className="event-photo" src={eventItem.photo} alt={`${eventItem.title} event`} />
+                  )}
                   <p>{eventItem.description}</p>
                   <p>
                     <strong>Hosted by:</strong>{" "}

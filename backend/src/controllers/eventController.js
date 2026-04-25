@@ -3,7 +3,7 @@ const Registration = require("../models/Registration");
 
 const createEvent = async (req, res) => {
   try {
-    const { title, description, date, endTime, location, capacity } = req.body;
+    const { title, description, date, endTime, location, capacity, photo } = req.body;
 
     if (!title || !description || !date || !endTime || !location || !capacity) {
       return res.status(400).json({ message: "All event fields are required." });
@@ -24,12 +24,16 @@ const createEvent = async (req, res) => {
     if (eventEndTime <= eventDate) {
       return res.status(400).json({ message: "Event end time must be after start time." });
     }
+    if (photo && typeof photo !== "string") {
+      return res.status(400).json({ message: "Invalid event photo." });
+    }
 
     const event = await Event.create({
       title,
       description,
       date: eventDate,
       endTime: eventEndTime,
+      photo: photo || "",
       location,
       capacity,
       departmentId: req.user._id,
