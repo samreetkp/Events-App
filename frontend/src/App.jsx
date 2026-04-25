@@ -22,6 +22,8 @@ const formatDateTime = (value) =>
     minute: "2-digit",
   });
 
+const MAX_EVENT_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
+
 function App() {
   const [activeTopSection, setActiveTopSection] = useState("");
   const [mode, setMode] = useState("login");
@@ -160,8 +162,15 @@ function App() {
   };
 
   const handleEventPhotoChange = (changeEvent) => {
+    clearFeedback();
     const file = changeEvent.target.files?.[0];
     if (!file) {
+      setEventForm((current) => ({ ...current, photo: "" }));
+      return;
+    }
+    if (file.size > MAX_EVENT_PHOTO_SIZE_BYTES) {
+      setError("Event photo must be 5MB or smaller.");
+      changeEvent.target.value = "";
       setEventForm((current) => ({ ...current, photo: "" }));
       return;
     }
