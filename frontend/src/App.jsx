@@ -155,6 +155,23 @@ function App() {
     }
   };
 
+  const handleDeleteEvent = async (eventId) => {
+    const confirmed = window.confirm("Are you sure you want to delete this event?");
+    if (!confirmed) return;
+
+    clearFeedback();
+    setLoading(true);
+    try {
+      await api.deleteEvent(eventId, token);
+      setMessage("Event deleted successfully.");
+      await loadEvents();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -309,6 +326,8 @@ function App() {
             {events.map((eventItem) => {
               const isRegistered = registeredEventIds.has(eventItem._id);
               const isFull = eventItem.spotsRemaining <= 0;
+              const isOwnerDepartment =
+                isDepartment && String(eventItem.departmentId) === String(user?.id);
               return (
                 <article className="event-card" key={eventItem._id}>
                   <h3>{eventItem.title}</h3>
@@ -328,6 +347,15 @@ function App() {
                       onClick={() => handleRegisterForEvent(eventItem._id)}
                     >
                       {isRegistered ? "Already Registered" : isFull ? "Full" : "Register"}
+                    </button>
+                  )}
+                  {isOwnerDepartment && (
+                    <button
+                      className="danger-button"
+                      disabled={loading}
+                      onClick={() => handleDeleteEvent(eventItem._id)}
+                    >
+                      Delete Event
                     </button>
                   )}
                 </article>

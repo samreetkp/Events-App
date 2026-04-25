@@ -53,4 +53,26 @@ const getEvents = async (_req, res) => {
   }
 };
 
-module.exports = { createEvent, getEvents };
+const deleteEvent = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const event = await Event.findById(eventId);
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    if (String(event.departmentId) !== String(req.user._id)) {
+      return res.status(403).json({ message: "You can only delete events you created." });
+    }
+
+    await Registration.deleteMany({ eventId: event._id });
+    await Event.deleteOne({ _id: event._id });
+
+    return res.status(200).json({ message: "Event deleted successfully." });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to delete event." });
+  }
+};
+
+module.exports = { createEvent, getEvents, deleteEvent };

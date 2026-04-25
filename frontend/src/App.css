@@ -50,6 +50,11 @@ button:disabled {
   background: #64748b;
 }
 
+.danger-button {
+  background: #b91c1c;
+  margin-top: 0.5rem;
+}
+
 .event-list {
   display: grid;
   gap: 0.75rem;
