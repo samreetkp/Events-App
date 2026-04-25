@@ -105,6 +105,15 @@ function App() {
       return matchesEventName && matchesDepartment && matchesDate;
     });
   }, [upcomingEvents, eventSearchTerm, departmentSearchTerm, dateFilter]);
+  const displayedUpcomingEvents = useMemo(() => {
+    if (!isDepartment) return filteredUpcomingEvents;
+
+    return filteredUpcomingEvents.filter((eventItem) => {
+      const eventDepartmentId =
+        typeof eventItem.departmentId === "object" ? eventItem.departmentId?._id : eventItem.departmentId;
+      return String(eventDepartmentId) === String(user?.id);
+    });
+  }, [filteredUpcomingEvents, isDepartment, user?.id]);
 
   const loadEvents = async () => {
     try {
@@ -438,6 +447,10 @@ function App() {
     setError("");
   };
 
+  const handleGoHome = () => {
+    window.location.assign("/");
+  };
+
   const handleUpdateAccount = async (submitEvent) => {
     submitEvent.preventDefault();
     clearFeedback();
@@ -516,7 +529,9 @@ function App() {
         </div>
       )}
       <header className="top-nav">
-        <h1>UniEvents</h1>
+        <button type="button" className="brand-button" onClick={handleGoHome}>
+          UniEvents
+        </button>
         {isMobileView ? (
           <div className="mobile-menu-wrapper">
             <button
@@ -644,11 +659,14 @@ function App() {
                   {mode === "register" ? "Register" : "Login"}
                 </button>
               </form>
+              <p className="auth-toggle-text">
+                {mode === "login" ? "Need an account?" : "Already have an account?"}
+              </p>
               <button
                 className="secondary-button auth-toggle-button"
                 onClick={() => setMode((current) => (current === "login" ? "register" : "login"))}
               >
-                {mode === "login" ? "Need an account? Register" : "Already have an account? Login"}
+                {mode === "login" ? "Register" : "Login"}
               </button>
             </>
           ) : (
@@ -742,85 +760,15 @@ function App() {
         </section>
       )}
 
-      {!hideMainContentForMobileMenu && isDepartment && (
-        <section className="panel">
-          <h2>Create Event</h2>
-          <form className="form" onSubmit={handleCreateEvent}>
-            <label>Title</label>
-            <input
-              value={eventForm.title}
-              onChange={(event) =>
-                setEventForm((current) => ({ ...current, title: event.target.value }))
-              }
-              required
-            />
-            <label>Description</label>
-            <textarea
-              value={eventForm.description}
-              onChange={(event) =>
-                setEventForm((current) => ({ ...current, description: event.target.value }))
-              }
-              required
-            />
-            <label>Date</label>
-            <input
-              type="date"
-              value={eventForm.eventDate}
-              onChange={(event) =>
-                setEventForm((current) => ({ ...current, eventDate: event.target.value }))
-              }
-              required
-            />
-            <label>Start Time</label>
-            <input
-              type="time"
-              value={eventForm.startTime}
-              onChange={(event) =>
-                setEventForm((current) => ({ ...current, startTime: event.target.value }))
-              }
-              required
-            />
-            <label>End Time</label>
-            <input
-              type="time"
-              value={eventForm.endTime}
-              onChange={(event) =>
-                setEventForm((current) => ({ ...current, endTime: event.target.value }))
-              }
-              required
-            />
-            <label>Location</label>
-            <input
-              value={eventForm.location}
-              onChange={(event) =>
-                setEventForm((current) => ({ ...current, location: event.target.value }))
-              }
-              required
-            />
-            <label>Event Photo</label>
-            <input type="file" accept="image/*" onChange={handleEventPhotoChange} />
-            <label>Capacity</label>
-            <input
-              type="number"
-              min="1"
-              value={eventForm.capacity}
-              onChange={(event) =>
-                setEventForm((current) => ({ ...current, capacity: event.target.value }))
-              }
-              required
-            />
-            <button type="submit" disabled={loading}>
-              Create Event
-            </button>
-          </form>
-        </section>
-      )}
-
       {!hideMainContentForMobileMenu && !user && (
         <p className="login-register-hint">Login to register for events.</p>
       )}
       {!hideMainContentForMobileMenu && (
-      <div className={`events-layout ${isStudent ? "student-events-layout" : ""}`}>
+      <div
+        className={`events-layout ${isStudent ? "student-events-layout" : ""} ${
+          isDepartment && !isStudent ? "department-events-layout" : ""
+        }`}
+      >
         {isStudent && (
           <section className="panel registrations-panel">
             <h2>My Registrations</h2>
@@ -869,7 +817,7 @@ function App() {
 
         <section className="panel upcoming-events-panel">
           <div className="row-between">
-            <h2>Upcoming Events</h2>
+            <h2>{isDepartment ? "Department Upcoming Events" : "Upcoming Events"}</h2>
           </div>
           {isStudent && (
             <div className="event-filter-grid">
@@ -895,11 +843,11 @@ function App() {
               </button>
             </div>
           )}
-          {filteredUpcomingEvents.length === 0 ? (
+          {displayedUpcomingEvents.length === 0 ? (
             <p>No upcoming events yet.</p>
           ) : (
             <div className="event-list">
-              {filteredUpcomingEvents.map((eventItem) => {
+              {displayedUpcomingEvents.map((eventItem) => {
                 const isRegistered = registeredEventIds.has(eventItem._id);
                 const isFull = eventItem.spotsRemaining <= 0;
                 const eventDepartmentId =
@@ -947,11 +895,16 @@ function App() {
                     {isStudent && (
                       <>
                         {isRegistered ? (
-                          <button disabled={loading} onClick={() => handleUnregisterFromEvent(eventItem._id)}>
+                          <button
+                            className="upcoming-unregister-button"
+                            disabled={loading}
+                            onClick={() => handleUnregisterFromEvent(eventItem._id)}
+                          >
                             Unregister
                           </button>
                         ) : (
                           <button
+                            className="event-register-button"
                             disabled={loading || isFull}
                             onClick={() => handleRegisterForEvent(eventItem._id)}
                           >
@@ -1070,6 +1023,79 @@ function App() {
             </div>
           )}
         </section>
+        {isDepartment && (
+          <section className="panel create-event-panel">
+            <h2>Create Event</h2>
+            <form className="form" onSubmit={handleCreateEvent}>
+              <label>Title</label>
+              <input
+                value={eventForm.title}
+                onChange={(event) =>
+                  setEventForm((current) => ({ ...current, title: event.target.value }))
+                }
+                required
+              />
+              <label>Description</label>
+              <textarea
+                value={eventForm.description}
+                onChange={(event) =>
+                  setEventForm((current) => ({ ...current, description: event.target.value }))
+                }
+                required
+              />
+              <label>Date</label>
+              <input
+                type="date"
+                value={eventForm.eventDate}
+                onChange={(event) =>
+                  setEventForm((current) => ({ ...current, eventDate: event.target.value }))
+                }
+                required
+              />
+              <label>Start Time</label>
+              <input
+                type="time"
+                value={eventForm.startTime}
+                onChange={(event) =>
+                  setEventForm((current) => ({ ...current, startTime: event.target.value }))
+                }
+                required
+              />
+              <label>End Time</label>
+              <input
+                type="time"
+                value={eventForm.endTime}
+                onChange={(event) =>
+                  setEventForm((current) => ({ ...current, endTime: event.target.value }))
+                }
+                required
+              />
+              <label>Location</label>
+              <input
+                value={eventForm.location}
+                onChange={(event) =>
+                  setEventForm((current) => ({ ...current, location: event.target.value }))
+                }
+                required
+              />
+              <label>Event Photo</label>
+              <input type="file" accept="image/*" onChange={handleEventPhotoChange} />
+              <label>Capacity</label>
+              <input
+                type="number"
+                min="1"
+                value={eventForm.capacity}
+                onChange={(event) =>
+                  setEventForm((current) => ({ ...current, capacity: event.target.value }))
+                }
+                required
+              />
+              <button type="submit" disabled={loading}>
+                Create Event
+              </button>
+            </form>
+          </section>
+        )}
       </div>
       )}
 
