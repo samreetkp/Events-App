@@ -22,6 +22,13 @@ const formatDateTime = (value) =>
     minute: "2-digit",
   });
 
+const formatDateOnly = (value) =>
+  new Date(value).toLocaleDateString("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
 const MAX_EVENT_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
 
 function App() {
@@ -38,6 +45,9 @@ function App() {
   const [myRegistrations, setMyRegistrations] = useState([]);
   const [eventAttendees, setEventAttendees] = useState({});
   const [openAttendeesEventId, setOpenAttendeesEventId] = useState("");
+  const [eventSearchTerm, setEventSearchTerm] = useState("");
+  const [departmentSearchTerm, setDepartmentSearchTerm] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -53,6 +63,19 @@ function App() {
     () => events.filter((eventItem) => new Date(eventItem.date) > new Date()),
     [events]
   );
+  const filteredUpcomingEvents = useMemo(() => {
+    return upcomingEvents.filter((eventItem) => {
+      const matchesEventName = eventItem.title
+        ?.toLowerCase()
+        .includes(eventSearchTerm.trim().toLowerCase());
+      const matchesDepartment = (eventItem.departmentName || eventItem.departmentId?.name || "")
+        .toLowerCase()
+        .includes(departmentSearchTerm.trim().toLowerCase());
+      const matchesDate = dateFilter ? formatDateOnly(eventItem.date) === dateFilter : true;
+
+      return matchesEventName && matchesDepartment && matchesDate;
+    });
+  }, [upcomingEvents, eventSearchTerm, departmentSearchTerm, dateFilter]);
 
   const loadEvents = async () => {
     try {
@@ -437,11 +460,28 @@ function App() {
         <div className="row-between">
           <h2>Upcoming Events</h2>
         </div>
-        {upcomingEvents.length === 0 ? (
+        {isStudent && (
+          <div className="event-filter-grid">
+            <input
+              type="text"
+              placeholder="Search by event name"
+              value={eventSearchTerm}
+              onChange={(event) => setEventSearchTerm(event.target.value)}
+            />
+            <input
+              type="text"
+              placeholder="Search by department name"
+              value={departmentSearchTerm}
+              onChange={(event) => setDepartmentSearchTerm(event.target.value)}
+            />
+            <input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} />
+          </div>
+        )}
+        {filteredUpcomingEvents.length === 0 ? (
           <p>No upcoming events yet.</p>
         ) : (
           <div className="event-list">
-            {upcomingEvents.map((eventItem) => {
+            {filteredUpcomingEvents.map((eventItem) => {
               const isRegistered = registeredEventIds.has(eventItem._id);
               const isFull = eventItem.spotsRemaining <= 0;
               const eventDepartmentId =
