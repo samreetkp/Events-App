@@ -3,10 +3,12 @@ import { api } from "./services/api";
 import "./App.css";
 
 const initialAuthForm = { name: "", email: "", password: "", role: "student" };
+const initialAccountForm = { name: "", email: "", password: "" };
 const initialEventForm = {
   title: "",
   description: "",
-  date: "",
+  eventDate: "",
+  startTime: "",
   endTime: "",
   photo: "",
   location: "",
@@ -30,12 +32,31 @@ const formatDateOnly = (value) =>
   });
 
 const MAX_EVENT_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
-const toDateTimeInputValue = (value) => new Date(value).toISOString().slice(0, 16);
+const toDateInputValue = (value) => {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+const toTimeInputValue = (value) => {
+  const date = new Date(value);
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+};
+const combineDateAndTime = (dateValue, timeValue) => `${dateValue}T${timeValue}`;
 
 function App() {
   const [activeTopSection, setActiveTopSection] = useState("");
   const [mode, setMode] = useState("login");
   const [authForm, setAuthForm] = useState(initialAuthForm);
+  const [accountForm, setAccountForm] = useState(() => {
+    const stored = localStorage.getItem("user");
+    if (!stored) return initialAccountForm;
+    const parsed = JSON.parse(stored);
+    return { name: parsed.name || "", email: parsed.email || "", password: "" };
+  });
   const [eventForm, setEventForm] = useState(initialEventForm);
   const [token, setToken] = useState(localStorage.getItem("token") || "");
   const [user, setUser] = useState(() => {
@@ -44,6 +65,7 @@ function App() {
   });
   const [events, setEvents] = useState([]);
   const [myRegistrations, setMyRegistrations] = useState([]);
+  const [hiddenRegistrationIds, setHiddenRegistrationIds] = useState([]);
   const [eventAttendees, setEventAttendees] = useState({});
   const [openAttendeesEventId, setOpenAttendeesEventId] = useState("");
   const [editingEventId, setEditingEventId] = useState("");
@@ -51,6 +73,7 @@ function App() {
   const [eventSearchTerm, setEventSearchTerm] = useState("");
   const [departmentSearchTerm, setDepartmentSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [registrationInfoEvent, setRegistrationInfoEvent] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -94,6 +117,7 @@ function App() {
     try {
       const data = await api.getMyRegistrations(currentToken);
       setMyRegistrations(data);
+      setHiddenRegistrationIds([]);
     } catch (requestError) {
       setError(requestError.message);
     }
@@ -177,6 +201,8 @@ function App() {
       localStorage.setItem("user", JSON.stringify(payload.user));
       setToken(payload.token);
       setUser(payload.user);
+      setActiveTopSection("");
+      setAccountForm({ name: payload.user.name, email: payload.user.email, password: "" });
       setAuthForm(initialAuthForm);
       setMessage(`Welcome, ${payload.user.name}.`);
       await loadEvents();
@@ -195,10 +221,17 @@ function App() {
     clearFeedback();
     setLoading(true);
     try {
+      if (!eventForm.eventDate || !eventForm.startTime || !eventForm.endTime) {
+        throw new Error("Date, start time, and end time are required.");
+      }
       const payload = {
         ...eventForm,
+        date: combineDateAndTime(eventForm.eventDate, eventForm.startTime),
+        endTime: combineDateAndTime(eventForm.eventDate, eventForm.endTime),
         capacity: parseCapacity(eventForm.capacity),
       };
+      delete payload.eventDate;
+      delete payload.startTime;
       await api.createEvent(payload, token);
       setEventForm(initialEventForm);
       setMessage("Event created successfully.");
@@ -281,8 +314,9 @@ function App() {
     setEditEventForm({
       title: eventItem.title || "",
       description: eventItem.description || "",
-      date: toDateTimeInputValue(eventItem.date),
-      endTime: eventItem.endTime ? toDateTimeInputValue(eventItem.endTime) : "",
+      eventDate: toDateInputValue(eventItem.date),
+      startTime: toTimeInputValue(eventItem.date),
+      endTime: eventItem.endTime ? toTimeInputValue(eventItem.endTime) : "",
       photo: eventItem.photo || "",
       location: eventItem.location || "",
       capacity: String(eventItem.capacity || "1"),
@@ -320,10 +354,17 @@ function App() {
     clearFeedback();
     setLoading(true);
     try {
+      if (!editEventForm.eventDate || !editEventForm.startTime || !editEventForm.endTime) {
+        throw new Error("Date, start time, and end time are required.");
+      }
       const payload = {
         ...editEventForm,
+        date: combineDateAndTime(editEventForm.eventDate, editEventForm.startTime),
+        endTime: combineDateAndTime(editEventForm.eventDate, editEventForm.endTime),
         capacity: parseCapacity(editEventForm.capacity),
       };
+      delete payload.eventDate;
+      delete payload.startTime;
       await api.updateEvent(editingEventId, payload, token);
       setMessage("Event updated successfully.");
       setEditingEventId("");
@@ -359,14 +400,59 @@ function App() {
     setOpenAttendeesEventId(eventId);
   };
 
+  const handleShowRegistrationInfo = (registration) => {
+    const event = registration.eventId;
+    if (!event) {
+      setError("Event details are not available.");
+      return;
+    }
+    setRegistrationInfoEvent(event);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setToken("");
     setUser(null);
+    setAccountForm(initialAccountForm);
     setMyRegistrations([]);
     setMessage("Logged out.");
     setError("");
+  };
+
+  const handleUpdateAccount = async (submitEvent) => {
+    submitEvent.preventDefault();
+    clearFeedback();
+    setLoading(true);
+    try {
+      const payload = {
+        name: accountForm.name,
+      };
+      if (accountForm.password) {
+        payload.password = accountForm.password;
+      }
+
+      const response = await api.updateProfile(payload, token);
+      const updatedUser = response.user;
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setAccountForm((current) => ({ ...current, password: "" }));
+      setMessage("Account settings updated.");
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearEventFilters = () => {
+    setEventSearchTerm("");
+    setDepartmentSearchTerm("");
+    setDateFilter("");
+  };
+
+  const handleCloseRegistrationInfo = () => {
+    setRegistrationInfoEvent(null);
   };
 
   return (
@@ -374,6 +460,31 @@ function App() {
       {(message || error) && (
         <div className={`toast-message ${error ? "toast-error" : "toast-success"}`}>
           {error || message}
+        </div>
+      )}
+      {registrationInfoEvent && (
+        <div className="modal-overlay" onClick={handleCloseRegistrationInfo}>
+          <div className="info-modal-card" onClick={(event) => event.stopPropagation()}>
+            <h3>{registrationInfoEvent.title || "Event Details"}</h3>
+            <p>
+              <strong>Date & Time:</strong>{" "}
+              {registrationInfoEvent.date ? formatDateTime(registrationInfoEvent.date) : "N/A"}
+              {" - "}
+              {registrationInfoEvent.endTime ? formatDateTime(registrationInfoEvent.endTime) : "TBD"}
+            </p>
+            <p>
+              <strong>Location:</strong> {registrationInfoEvent.location || "N/A"}
+            </p>
+            <p>
+              <strong>Hosted by:</strong> {registrationInfoEvent.departmentName || "Department"}
+            </p>
+            <p>
+              <strong>Description:</strong> {registrationInfoEvent.description || "N/A"}
+            </p>
+            <button type="button" className="secondary-button" onClick={handleCloseRegistrationInfo}>
+              Close
+            </button>
+          </div>
         </div>
       )}
       <header className="top-nav">
@@ -395,6 +506,11 @@ function App() {
           >
             {user ? "Account" : "Login"}
           </button>
+          {user && (
+            <button type="button" className="nav-link-button" onClick={handleLogout}>
+              Logout
+            </button>
+          )}
         </nav>
       </header>
 
@@ -470,14 +586,46 @@ function App() {
               </button>
             </>
           ) : (
-            <div className="row-between">
-              <p>
-                Signed in as <strong>{user.name}</strong> ({user.role})
-              </p>
-              <button className="secondary-button" onClick={handleLogout}>
-                Logout
-              </button>
-            </div>
+            <>
+              <div className="row-between">
+                <p>
+                  Signed in as <strong>{user.name}</strong> ({user.role})
+                </p>
+                <button className="secondary-button" onClick={handleLogout}>
+                  Logout
+                </button>
+              </div>
+              <h3>Account Settings</h3>
+              <form className="form" onSubmit={handleUpdateAccount}>
+                <label>Name</label>
+                <input
+                  value={accountForm.name}
+                  onChange={(event) =>
+                    setAccountForm((current) => ({ ...current, name: event.target.value }))
+                  }
+                  required
+                />
+                <label>Email</label>
+                <input
+                  type="email"
+                  className="read-only-input"
+                  value={accountForm.email}
+                  readOnly
+                />
+                <label>New Password (optional)</label>
+                <input
+                  type="password"
+                  value={accountForm.password}
+                  onChange={(event) =>
+                    setAccountForm((current) => ({ ...current, password: event.target.value }))
+                  }
+                  placeholder="Leave blank to keep current password"
+                />
+                <button type="submit" disabled={loading}>
+                  Save Account Changes
+                </button>
+              </form>
+            </>
           )}
         </section>
       )}
@@ -502,18 +650,27 @@ function App() {
               }
               required
             />
+            <label>Date</label>
+            <input
+              type="date"
+              value={eventForm.eventDate}
+              onChange={(event) =>
+                setEventForm((current) => ({ ...current, eventDate: event.target.value }))
+              }
+              required
+            />
             <label>Start Time</label>
             <input
-              type="datetime-local"
-              value={eventForm.date}
+              type="time"
+              value={eventForm.startTime}
               onChange={(event) =>
-                setEventForm((current) => ({ ...current, date: event.target.value }))
+                setEventForm((current) => ({ ...current, startTime: event.target.value }))
               }
               required
             />
             <label>End Time</label>
             <input
-              type="datetime-local"
+              type="time"
               value={eventForm.endTime}
               onChange={(event) =>
                 setEventForm((current) => ({ ...current, endTime: event.target.value }))
@@ -547,213 +704,258 @@ function App() {
         </section>
       )}
 
-      <section className="panel">
-        <div className="row-between">
-          <h2>Upcoming Events</h2>
-        </div>
+      {!user && <p className="login-register-hint">Login to register for events.</p>}
+      <div className={`events-layout ${isStudent ? "student-events-layout" : ""}`}>
         {isStudent && (
-          <div className="event-filter-grid">
-            <input
-              type="text"
-              placeholder="Search by event name"
-              value={eventSearchTerm}
-              onChange={(event) => setEventSearchTerm(event.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="Search by department name"
-              value={departmentSearchTerm}
-              onChange={(event) => setDepartmentSearchTerm(event.target.value)}
-            />
-            <input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} />
-          </div>
-        )}
-        {filteredUpcomingEvents.length === 0 ? (
-          <p>No upcoming events yet.</p>
-        ) : (
-          <div className="event-list">
-            {filteredUpcomingEvents.map((eventItem) => {
-              const isRegistered = registeredEventIds.has(eventItem._id);
-              const isFull = eventItem.spotsRemaining <= 0;
-              const eventDepartmentId =
-                typeof eventItem.departmentId === "object"
-                  ? eventItem.departmentId?._id
-                  : eventItem.departmentId;
-              const isOwnerDepartment =
-                isDepartment && String(eventDepartmentId) === String(user?.id);
-              return (
-                <article className="event-card" key={eventItem._id}>
-                  <div className="event-card-header">
-                    <h3>{eventItem.title}</h3>
-                    {isOwnerDepartment && (
-                      <button
-                        className="secondary-button top-right-edit-button"
-                        disabled={loading}
-                        onClick={() =>
-                          editingEventId === eventItem._id
-                            ? handleCancelEditEvent()
-                            : handleStartEditEvent(eventItem)
-                        }
-                      >
-                        {editingEventId === eventItem._id ? "Cancel Edit" : "Edit Event"}
-                      </button>
-                    )}
-                  </div>
-                  {eventItem.photo && (
-                    <img className="event-photo" src={eventItem.photo} alt={`${eventItem.title} event`} />
-                  )}
-                  <p>{eventItem.description}</p>
-                  <p>
-                    <strong>Hosted by:</strong>{" "}
-                    {eventItem.departmentName || eventItem.departmentId?.name || "Department"}
-                  </p>
-                  <p>
-                    <strong>Date & Time:</strong> {formatDateTime(eventItem.date)} -{" "}
-                    {eventItem.endTime ? formatDateTime(eventItem.endTime) : "TBD"}
-                  </p>
-                  <p>
-                    <strong>Location:</strong> {eventItem.location}
-                  </p>
-                  <p>
-                    <strong>Spots Remaining:</strong> {eventItem.spotsRemaining}
-                  </p>
-                  {isStudent && (
-                    <>
-                      {isRegistered ? (
-                        <button disabled={loading} onClick={() => handleUnregisterFromEvent(eventItem._id)}>
+          <section className="panel registrations-panel">
+            <h2>My Registrations</h2>
+            {myRegistrations.filter((registration) => !hiddenRegistrationIds.includes(registration._id))
+              .length === 0 ? (
+              <p>No registrations yet.</p>
+            ) : (
+              <ul className="registration-list">
+                {myRegistrations
+                  .filter((registration) => !hiddenRegistrationIds.includes(registration._id))
+                  .map((registration) => (
+                  <li key={registration._id}>
+                    <div className="registration-row">
+                      <span>
+                        {registration.eventId?.title} -{" "}
+                        {registration.eventId?.date
+                          ? formatDateTime(registration.eventId.date)
+                          : "Event deleted"}
+                      </span>
+                      <div className="registration-actions">
+                        <button
+                          type="button"
+                          disabled={loading || !registration.eventId?._id}
+                          onClick={() =>
+                            registration.eventId?._id &&
+                            handleUnregisterFromEvent(registration.eventId._id)
+                          }
+                        >
                           Unregister
                         </button>
-                      ) : (
                         <button
-                          disabled={loading || isFull}
-                          onClick={() => handleRegisterForEvent(eventItem._id)}
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => handleShowRegistrationInfo(registration)}
                         >
-                          {isFull ? "Full" : "Register"}
+                          More Info
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
+        <section className="panel upcoming-events-panel">
+          <div className="row-between">
+            <h2>Upcoming Events</h2>
+          </div>
+          {isStudent && (
+            <div className="event-filter-grid">
+              <input
+                type="text"
+                placeholder="Search by event name"
+                value={eventSearchTerm}
+                onChange={(event) => setEventSearchTerm(event.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="Search by department name"
+                value={departmentSearchTerm}
+                onChange={(event) => setDepartmentSearchTerm(event.target.value)}
+              />
+              <input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} />
+              <button
+                type="button"
+                className="secondary-button clear-filters-button"
+                onClick={handleClearEventFilters}
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
+          {filteredUpcomingEvents.length === 0 ? (
+            <p>No upcoming events yet.</p>
+          ) : (
+            <div className="event-list">
+              {filteredUpcomingEvents.map((eventItem) => {
+                const isRegistered = registeredEventIds.has(eventItem._id);
+                const isFull = eventItem.spotsRemaining <= 0;
+                const eventDepartmentId =
+                  typeof eventItem.departmentId === "object"
+                    ? eventItem.departmentId?._id
+                    : eventItem.departmentId;
+                const isOwnerDepartment =
+                  isDepartment && String(eventDepartmentId) === String(user?.id);
+                return (
+                  <article className="event-card" key={eventItem._id}>
+                    <div className="event-card-header">
+                      <h3>{eventItem.title}</h3>
+                      {isOwnerDepartment && (
+                        <button
+                          className="secondary-button top-right-edit-button"
+                          disabled={loading}
+                          onClick={() =>
+                            editingEventId === eventItem._id
+                              ? handleCancelEditEvent()
+                              : handleStartEditEvent(eventItem)
+                          }
+                        >
+                          {editingEventId === eventItem._id ? "Cancel Edit" : "Edit Event"}
                         </button>
                       )}
-                    </>
-                  )}
-                  {isOwnerDepartment && (
-                    <>
-                      <button
-                        className="secondary-button attendees-toggle-button"
-                        disabled={loading}
-                        onClick={() => handleToggleAttendees(eventItem._id)}
-                      >
-                        {openAttendeesEventId === eventItem._id ? "Hide Attendees" : "View Attendees"}
-                      </button>
-                      <button
-                        className="danger-button"
-                        disabled={loading}
-                        onClick={() => handleDeleteEvent(eventItem._id)}
-                      >
-                        Delete Event
-                      </button>
-                    </>
-                  )}
-                  {isOwnerDepartment && editingEventId === eventItem._id && (
-                    <form className="form edit-event-form" onSubmit={handleEditEventSubmit}>
-                      <label>Title</label>
-                      <input
-                        value={editEventForm.title}
-                        onChange={(event) =>
-                          setEditEventForm((current) => ({ ...current, title: event.target.value }))
-                        }
-                        required
-                      />
-                      <label>Description</label>
-                      <textarea
-                        value={editEventForm.description}
-                        onChange={(event) =>
-                          setEditEventForm((current) => ({ ...current, description: event.target.value }))
-                        }
-                        required
-                      />
-                      <label>Start Time</label>
-                      <input
-                        type="datetime-local"
-                        value={editEventForm.date}
-                        onChange={(event) =>
-                          setEditEventForm((current) => ({ ...current, date: event.target.value }))
-                        }
-                        required
-                      />
-                      <label>End Time</label>
-                      <input
-                        type="datetime-local"
-                        value={editEventForm.endTime}
-                        onChange={(event) =>
-                          setEditEventForm((current) => ({ ...current, endTime: event.target.value }))
-                        }
-                        required
-                      />
-                      <label>Location</label>
-                      <input
-                        value={editEventForm.location}
-                        onChange={(event) =>
-                          setEditEventForm((current) => ({ ...current, location: event.target.value }))
-                        }
-                        required
-                      />
-                      <label>Event Photo</label>
-                      <input type="file" accept="image/*" onChange={handleEditEventPhotoChange} />
-                      <label>Capacity</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={editEventForm.capacity}
-                        onChange={(event) =>
-                          setEditEventForm((current) => ({ ...current, capacity: event.target.value }))
-                        }
-                        required
-                      />
-                      <button type="submit" disabled={loading}>
-                        Save Changes
-                      </button>
-                    </form>
-                  )}
-                  {isOwnerDepartment && openAttendeesEventId === eventItem._id && (
-                    <div className="attendees-box">
-                      <strong>Attendees</strong>
-                      {eventAttendees[eventItem._id]?.length ? (
-                        <ul className="attendees-list">
-                          {eventAttendees[eventItem._id].map((attendee) => (
-                            <li key={attendee.registrationId}>
-                              {attendee.name} ({attendee.email})
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p>No attendees yet.</p>
-                      )}
                     </div>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {isStudent && (
-        <section className="panel">
-          <h2>My Registrations</h2>
-          {myRegistrations.length === 0 ? (
-            <p>No registrations yet.</p>
-          ) : (
-            <ul className="registration-list">
-              {myRegistrations.map((registration) => (
-                <li key={registration._id}>
-                  {registration.eventId?.title} -{" "}
-                  {registration.eventId?.date
-                    ? formatDateTime(registration.eventId.date)
-                    : "Event deleted"}
-                </li>
-              ))}
-            </ul>
+                    {eventItem.photo && (
+                      <img className="event-photo" src={eventItem.photo} alt={`${eventItem.title} event`} />
+                    )}
+                    <p>{eventItem.description}</p>
+                    <p>
+                      <strong>Hosted by:</strong>{" "}
+                      {eventItem.departmentName || eventItem.departmentId?.name || "Department"}
+                    </p>
+                    <p>
+                      <strong>Date & Time:</strong> {formatDateTime(eventItem.date)} -{" "}
+                      {eventItem.endTime ? formatDateTime(eventItem.endTime) : "TBD"}
+                    </p>
+                    <p>
+                      <strong>Location:</strong> {eventItem.location}
+                    </p>
+                    <p>
+                      <strong>Spots Remaining:</strong> {eventItem.spotsRemaining}
+                    </p>
+                    {isStudent && (
+                      <>
+                        {isRegistered ? (
+                          <button disabled={loading} onClick={() => handleUnregisterFromEvent(eventItem._id)}>
+                            Unregister
+                          </button>
+                        ) : (
+                          <button
+                            disabled={loading || isFull}
+                            onClick={() => handleRegisterForEvent(eventItem._id)}
+                          >
+                            {isFull ? "Full" : "Register"}
+                          </button>
+                        )}
+                      </>
+                    )}
+                    {isOwnerDepartment && (
+                      <>
+                        <button
+                          className="secondary-button attendees-toggle-button"
+                          disabled={loading}
+                          onClick={() => handleToggleAttendees(eventItem._id)}
+                        >
+                          {openAttendeesEventId === eventItem._id ? "Hide Attendees" : "View Attendees"}
+                        </button>
+                        <button
+                          className="danger-button"
+                          disabled={loading}
+                          onClick={() => handleDeleteEvent(eventItem._id)}
+                        >
+                          Delete Event
+                        </button>
+                      </>
+                    )}
+                    {isOwnerDepartment && editingEventId === eventItem._id && (
+                      <form className="form edit-event-form" onSubmit={handleEditEventSubmit}>
+                        <label>Title</label>
+                        <input
+                          value={editEventForm.title}
+                          onChange={(event) =>
+                            setEditEventForm((current) => ({ ...current, title: event.target.value }))
+                          }
+                          required
+                        />
+                        <label>Description</label>
+                        <textarea
+                          value={editEventForm.description}
+                          onChange={(event) =>
+                            setEditEventForm((current) => ({ ...current, description: event.target.value }))
+                          }
+                          required
+                        />
+                        <label>Date</label>
+                        <input
+                          type="date"
+                          value={editEventForm.eventDate}
+                          onChange={(event) =>
+                            setEditEventForm((current) => ({ ...current, eventDate: event.target.value }))
+                          }
+                          required
+                        />
+                        <label>Start Time</label>
+                        <input
+                          type="time"
+                          value={editEventForm.startTime}
+                          onChange={(event) =>
+                            setEditEventForm((current) => ({ ...current, startTime: event.target.value }))
+                          }
+                          required
+                        />
+                        <label>End Time</label>
+                        <input
+                          type="time"
+                          value={editEventForm.endTime}
+                          onChange={(event) =>
+                            setEditEventForm((current) => ({ ...current, endTime: event.target.value }))
+                          }
+                          required
+                        />
+                        <label>Location</label>
+                        <input
+                          value={editEventForm.location}
+                          onChange={(event) =>
+                            setEditEventForm((current) => ({ ...current, location: event.target.value }))
+                          }
+                          required
+                        />
+                        <label>Event Photo</label>
+                        <input type="file" accept="image/*" onChange={handleEditEventPhotoChange} />
+                        <label>Capacity</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={editEventForm.capacity}
+                          onChange={(event) =>
+                            setEditEventForm((current) => ({ ...current, capacity: event.target.value }))
+                          }
+                          required
+                        />
+                        <button type="submit" disabled={loading}>
+                          Save Changes
+                        </button>
+                      </form>
+                    )}
+                    {isOwnerDepartment && openAttendeesEventId === eventItem._id && (
+                      <div className="attendees-box">
+                        <strong>Attendees</strong>
+                        {eventAttendees[eventItem._id]?.length ? (
+                          <ul className="attendees-list">
+                            {eventAttendees[eventItem._id].map((attendee) => (
+                              <li key={attendee.registrationId}>
+                                {attendee.name} ({attendee.email})
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p>No attendees yet.</p>
+                        )}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
           )}
         </section>
-      )}
+      </div>
 
     </main>
   );

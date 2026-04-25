@@ -33,6 +33,15 @@ export const api = {
     return handleResponse(response);
   },
 
+  updateProfile: async (body, token) => {
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: "PUT",
+      headers: buildHeaders(token),
+      body: JSON.stringify(body),
+    });
+    return handleResponse(response);
+  },
+
   getEvents: async () => {
     const response = await fetch(`${API_BASE_URL}/events`);
     return handleResponse(response);

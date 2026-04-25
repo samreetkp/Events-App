@@ -80,4 +80,42 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, login };
+const updateProfile = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ message: "Name is required." });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    if (email && email !== user.email) {
+      return res.status(400).json({ message: "Email cannot be changed from account settings." });
+    }
+
+    user.name = name;
+
+    if (password) {
+      user.password = await bcrypt.hash(password, 10);
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to update account settings." });
+  }
+};
+
+module.exports = { register, login, updateProfile };

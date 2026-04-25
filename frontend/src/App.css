@@ -1,7 +1,7 @@
 .container {
-  max-width: 900px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem 1rem 3rem;
+  padding: 1.5rem 0.75rem 2.5rem;
 }
 
 .toast-message {
@@ -29,6 +29,30 @@
   color: #ffffff;
   background: #2f2f2f;
   border: 1px solid #cfb87c;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 1rem;
+}
+
+.info-modal-card {
+  width: min(560px, 100%);
+  background: #ffffff;
+  border: 1px solid #cfb87c;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
+}
+
+.info-modal-card h3 {
+  margin-top: 0;
 }
 
 .top-nav {
@@ -99,11 +123,26 @@ button {
   background: #ffffff;
 }
 
+.form input,
+.form textarea,
+.form select,
+.form button {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 input:focus,
 textarea:focus,
 select:focus {
   outline: 2px solid #cfb87c;
   outline-offset: 1px;
+}
+
+.read-only-input {
+  background: #ececec;
+  color: #5a5a5a;
+  border-color: #9d9d9d;
+  cursor: not-allowed;
 }
 
 button {
@@ -156,9 +195,31 @@ button:disabled {
 
 .event-filter-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
   margin: 0.5rem 0 0.9rem;
+}
+
+.event-filter-grid input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.clear-filters-button {
+  width: auto !important;
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+@media (max-width: 720px) {
+  .event-filter-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.login-register-hint {
+  margin: 0.35rem 0 0.85rem;
+  font-weight: 600;
 }
 
 .event-card {
@@ -215,5 +276,51 @@ button:disabled {
 .registration-list {
   margin: 0;
   padding-left: 1rem;
+}
+
+.registration-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.registration-row span {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.registration-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.registration-actions button {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.events-layout {
+  display: block;
+}
+
+.student-events-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.student-events-layout .panel {
+  margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .student-events-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
