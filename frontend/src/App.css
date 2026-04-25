@@ -1,0 +1,77 @@
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #d8dbe0;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+input,
+textarea,
+select,
+button {
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #b8bfca;
+  font: inherit;
+}
+
+button {
+  border: none;
+  background: #1d4ed8;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.secondary-button {
+  background: #64748b;
+}
+
+.event-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.event-card {
+  border: 1px solid #d8dbe0;
+  border-radius: 8px;
+  padding: 0.85rem;
+}
+
+.registration-list {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.success {
+  color: #1f7a1f;
+  font-weight: 600;
+}
+
+.error {
+  color: #c1121f;
+  font-weight: 600;
+}
