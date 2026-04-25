@@ -5,11 +5,12 @@
 }
 
 .panel {
-  background: #fff;
-  border: 1px solid #d8dbe0;
+  background: #ffffff;
+  border: 1px solid #cfb87c;
   border-radius: 10px;
   padding: 1rem;
   margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .row-between {
@@ -30,15 +31,30 @@ select,
 button {
   padding: 0.55rem 0.75rem;
   border-radius: 8px;
-  border: 1px solid #b8bfca;
+  border: 1px solid #000000;
   font: inherit;
+  color: #000000;
+  background: #ffffff;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid #cfb87c;
+  outline-offset: 1px;
 }
 
 button {
   border: none;
-  background: #1d4ed8;
-  color: #fff;
+  background: #000000;
+  color: #cfb87c;
   cursor: pointer;
+  font-weight: 600;
+}
+
+button:hover:not(:disabled) {
+  background: #cfb87c;
+  color: #000000;
 }
 
 button:disabled {
@@ -47,12 +63,20 @@ button:disabled {
 }
 
 .secondary-button {
-  background: #64748b;
+  background: #cfb87c;
+  color: #000000;
 }
 
 .danger-button {
-  background: #b91c1c;
+  background: #000000;
+  color: #ffffff;
   margin-top: 0.5rem;
+  border: 1px solid #cfb87c;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: #ffffff;
+  color: #000000;
 }
 
 .event-list {
@@ -61,9 +85,10 @@ button:disabled {
 }
 
 .event-card {
-  border: 1px solid #d8dbe0;
+  border: 1px solid #000000;
   border-radius: 8px;
   padding: 0.85rem;
+  background: #ffffff;
 }
 
 .registration-list {
@@ -72,11 +97,19 @@ button:disabled {
 }
 
 .success {
-  color: #1f7a1f;
+  color: #000000;
   font-weight: 600;
+  background: #cfb87c;
+  border: 1px solid #000000;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
 }
 
 .error {
-  color: #c1121f;
+  color: #ffffff;
   font-weight: 600;
+  background: #000000;
+  border: 1px solid #cfb87c;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
 }
