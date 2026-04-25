@@ -47,6 +47,15 @@ export const api = {
     return handleResponse(response);
   },
 
+  updateEvent: async (eventId, body, token) => {
+    const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
+      method: "PUT",
+      headers: buildHeaders(token),
+      body: JSON.stringify(body),
+    });
+    return handleResponse(response);
+  },
+
   deleteEvent: async (eventId, token) => {
     const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
       method: "DELETE",

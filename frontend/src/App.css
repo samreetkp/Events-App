@@ -4,6 +4,33 @@
   padding: 2rem 1rem 3rem;
 }
 
+.toast-message {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  min-width: 260px;
+  max-width: min(90vw, 560px);
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+
+.toast-success {
+  color: #000000;
+  background: #cfb87c;
+  border: 1px solid #000000;
+}
+
+.toast-error {
+  color: #ffffff;
+  background: #2f2f2f;
+  border: 1px solid #cfb87c;
+}
+
 .top-nav {
   display: flex;
   align-items: center;
@@ -141,6 +168,24 @@ button:disabled {
   background: #ffffff;
 }
 
+.event-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.event-card-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.top-right-edit-button {
+  margin-top: 0;
+  white-space: nowrap;
+}
+
 .event-photo {
   width: 100%;
   max-height: 220px;
@@ -161,25 +206,14 @@ button:disabled {
   padding-left: 1rem;
 }
 
+.edit-event-form {
+  margin-top: 0.75rem;
+  border-top: 1px dashed #cfb87c;
+  padding-top: 0.75rem;
+}
+
 .registration-list {
   margin: 0;
   padding-left: 1rem;
 }
 
-.success {
-  color: #000000;
-  font-weight: 600;
-  background: #cfb87c;
-  border: 1px solid #000000;
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
-}
-
-.error {
-  color: #ffffff;
-  font-weight: 600;
-  background: #000000;
-  border: 1px solid #cfb87c;
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
-}

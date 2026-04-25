@@ -10,7 +10,7 @@ const initialEventForm = {
   endTime: "",
   photo: "",
   location: "",
-  capacity: 10,
+  capacity: "10",
 };
 
 const formatDateTime = (value) =>
@@ -30,6 +30,7 @@ const formatDateOnly = (value) =>
   });
 
 const MAX_EVENT_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
+const toDateTimeInputValue = (value) => new Date(value).toISOString().slice(0, 16);
 
 function App() {
   const [activeTopSection, setActiveTopSection] = useState("");
@@ -45,6 +46,8 @@ function App() {
   const [myRegistrations, setMyRegistrations] = useState([]);
   const [eventAttendees, setEventAttendees] = useState({});
   const [openAttendeesEventId, setOpenAttendeesEventId] = useState("");
+  const [editingEventId, setEditingEventId] = useState("");
+  const [editEventForm, setEditEventForm] = useState(initialEventForm);
   const [eventSearchTerm, setEventSearchTerm] = useState("");
   const [departmentSearchTerm, setDepartmentSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("");
@@ -137,9 +140,28 @@ function App() {
     };
   }, [token, isStudent]);
 
+  useEffect(() => {
+    if (!message && !error) return undefined;
+
+    const timeoutId = setTimeout(() => {
+      setMessage("");
+      setError("");
+    }, 3000);
+
+    return () => clearTimeout(timeoutId);
+  }, [message, error]);
+
   const clearFeedback = () => {
     setError("");
     setMessage("");
+  };
+
+  const parseCapacity = (capacityValue) => {
+    const parsed = Number(capacityValue);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new Error("Capacity must be a whole number greater than 0.");
+    }
+    return parsed;
   };
 
   const handleAuthSubmit = async (submitEvent) => {
@@ -173,7 +195,11 @@ function App() {
     clearFeedback();
     setLoading(true);
     try {
-      await api.createEvent(eventForm, token);
+      const payload = {
+        ...eventForm,
+        capacity: parseCapacity(eventForm.capacity),
+      };
+      await api.createEvent(payload, token);
       setEventForm(initialEventForm);
       setMessage("Event created successfully.");
       await loadEvents();
@@ -250,6 +276,66 @@ function App() {
     }
   };
 
+  const handleStartEditEvent = (eventItem) => {
+    setEditingEventId(eventItem._id);
+    setEditEventForm({
+      title: eventItem.title || "",
+      description: eventItem.description || "",
+      date: toDateTimeInputValue(eventItem.date),
+      endTime: eventItem.endTime ? toDateTimeInputValue(eventItem.endTime) : "",
+      photo: eventItem.photo || "",
+      location: eventItem.location || "",
+      capacity: String(eventItem.capacity || "1"),
+    });
+  };
+
+  const handleCancelEditEvent = () => {
+    setEditingEventId("");
+    setEditEventForm(initialEventForm);
+  };
+
+  const handleEditEventPhotoChange = (changeEvent) => {
+    clearFeedback();
+    const file = changeEvent.target.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_EVENT_PHOTO_SIZE_BYTES) {
+      setError("Event photo must be 5MB or smaller.");
+      changeEvent.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setEditEventForm((current) => ({
+        ...current,
+        photo: typeof reader.result === "string" ? reader.result : "",
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditEventSubmit = async (submitEvent) => {
+    submitEvent.preventDefault();
+    if (!editingEventId) return;
+    clearFeedback();
+    setLoading(true);
+    try {
+      const payload = {
+        ...editEventForm,
+        capacity: parseCapacity(editEventForm.capacity),
+      };
+      await api.updateEvent(editingEventId, payload, token);
+      setMessage("Event updated successfully.");
+      setEditingEventId("");
+      setEditEventForm(initialEventForm);
+      await loadEvents();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleToggleAttendees = async (eventId) => {
     if (openAttendeesEventId === eventId) {
       setOpenAttendeesEventId("");
@@ -285,6 +371,11 @@ function App() {
 
   return (
     <main className="container">
+      {(message || error) && (
+        <div className={`toast-message ${error ? "toast-error" : "toast-success"}`}>
+          {error || message}
+        </div>
+      )}
       <header className="top-nav">
         <h1>UniEvents</h1>
         <nav>
@@ -445,7 +536,7 @@ function App() {
               min="1"
               value={eventForm.capacity}
               onChange={(event) =>
-                setEventForm((current) => ({ ...current, capacity: Number(event.target.value) }))
+                setEventForm((current) => ({ ...current, capacity: event.target.value }))
               }
               required
             />
@@ -492,7 +583,22 @@ function App() {
                 isDepartment && String(eventDepartmentId) === String(user?.id);
               return (
                 <article className="event-card" key={eventItem._id}>
-                  <h3>{eventItem.title}</h3>
+                  <div className="event-card-header">
+                    <h3>{eventItem.title}</h3>
+                    {isOwnerDepartment && (
+                      <button
+                        className="secondary-button top-right-edit-button"
+                        disabled={loading}
+                        onClick={() =>
+                          editingEventId === eventItem._id
+                            ? handleCancelEditEvent()
+                            : handleStartEditEvent(eventItem)
+                        }
+                      >
+                        {editingEventId === eventItem._id ? "Cancel Edit" : "Edit Event"}
+                      </button>
+                    )}
+                  </div>
                   {eventItem.photo && (
                     <img className="event-photo" src={eventItem.photo} alt={`${eventItem.title} event`} />
                   )}
@@ -545,6 +651,67 @@ function App() {
                       </button>
                     </>
                   )}
+                  {isOwnerDepartment && editingEventId === eventItem._id && (
+                    <form className="form edit-event-form" onSubmit={handleEditEventSubmit}>
+                      <label>Title</label>
+                      <input
+                        value={editEventForm.title}
+                        onChange={(event) =>
+                          setEditEventForm((current) => ({ ...current, title: event.target.value }))
+                        }
+                        required
+                      />
+                      <label>Description</label>
+                      <textarea
+                        value={editEventForm.description}
+                        onChange={(event) =>
+                          setEditEventForm((current) => ({ ...current, description: event.target.value }))
+                        }
+                        required
+                      />
+                      <label>Start Time</label>
+                      <input
+                        type="datetime-local"
+                        value={editEventForm.date}
+                        onChange={(event) =>
+                          setEditEventForm((current) => ({ ...current, date: event.target.value }))
+                        }
+                        required
+                      />
+                      <label>End Time</label>
+                      <input
+                        type="datetime-local"
+                        value={editEventForm.endTime}
+                        onChange={(event) =>
+                          setEditEventForm((current) => ({ ...current, endTime: event.target.value }))
+                        }
+                        required
+                      />
+                      <label>Location</label>
+                      <input
+                        value={editEventForm.location}
+                        onChange={(event) =>
+                          setEditEventForm((current) => ({ ...current, location: event.target.value }))
+                        }
+                        required
+                      />
+                      <label>Event Photo</label>
+                      <input type="file" accept="image/*" onChange={handleEditEventPhotoChange} />
+                      <label>Capacity</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={editEventForm.capacity}
+                        onChange={(event) =>
+                          setEditEventForm((current) => ({ ...current, capacity: event.target.value }))
+                        }
+                        required
+                      />
+                      <button type="submit" disabled={loading}>
+                        Save Changes
+                      </button>
+                    </form>
+                  )}
                   {isOwnerDepartment && openAttendeesEventId === eventItem._id && (
                     <div className="attendees-box">
                       <strong>Attendees</strong>
@@ -588,8 +755,6 @@ function App() {
         </section>
       )}
 
-      {message && <p className="success">{message}</p>}
-      {error && <p className="error">{error}</p>}
     </main>
   );
 }
