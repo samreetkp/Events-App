@@ -33,6 +33,7 @@ const createEvent = async (req, res) => {
       location,
       capacity,
       departmentId: req.user._id,
+      departmentName: req.user.name,
     });
 
     return res.status(201).json(event);
@@ -43,13 +44,17 @@ const createEvent = async (req, res) => {
 
 const getEvents = async (_req, res) => {
   try {
-    const events = await Event.find().sort({ date: 1 }).lean();
+    const events = await Event.find()
+      .populate("departmentId", "name")
+      .sort({ date: 1 })
+      .lean();
 
     const eventsWithSpots = await Promise.all(
       events.map(async (event) => {
         const registrationCount = await Registration.countDocuments({ eventId: event._id });
         return {
           ...event,
+          departmentName: event.departmentName || event.departmentId?.name || "Department",
           spotsRemaining: Math.max(event.capacity - registrationCount, 0),
         };
       })

@@ -12,6 +12,15 @@ const initialEventForm = {
   capacity: 10,
 };
 
+const formatDateTime = (value) =>
+  new Date(value).toLocaleString([], {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
 function App() {
   const [activeTopSection, setActiveTopSection] = useState("");
   const [mode, setMode] = useState("login");
@@ -24,6 +33,8 @@ function App() {
   });
   const [events, setEvents] = useState([]);
   const [myRegistrations, setMyRegistrations] = useState([]);
+  const [eventAttendees, setEventAttendees] = useState({});
+  const [openAttendeesEventId, setOpenAttendeesEventId] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -176,6 +187,29 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleToggleAttendees = async (eventId) => {
+    if (openAttendeesEventId === eventId) {
+      setOpenAttendeesEventId("");
+      return;
+    }
+
+    if (!eventAttendees[eventId]) {
+      clearFeedback();
+      setLoading(true);
+      try {
+        const attendees = await api.getEventAttendees(eventId, token);
+        setEventAttendees((current) => ({ ...current, [eventId]: attendees }));
+      } catch (requestError) {
+        setError(requestError.message);
+        setLoading(false);
+        return;
+      }
+      setLoading(false);
+    }
+
+    setOpenAttendeesEventId(eventId);
   };
 
   const handleLogout = () => {
@@ -373,18 +407,23 @@ function App() {
             {upcomingEvents.map((eventItem) => {
               const isRegistered = registeredEventIds.has(eventItem._id);
               const isFull = eventItem.spotsRemaining <= 0;
+              const eventDepartmentId =
+                typeof eventItem.departmentId === "object"
+                  ? eventItem.departmentId?._id
+                  : eventItem.departmentId;
               const isOwnerDepartment =
-                isDepartment && String(eventItem.departmentId) === String(user?.id);
+                isDepartment && String(eventDepartmentId) === String(user?.id);
               return (
                 <article className="event-card" key={eventItem._id}>
                   <h3>{eventItem.title}</h3>
                   <p>{eventItem.description}</p>
                   <p>
-                    <strong>Start:</strong> {new Date(eventItem.date).toLocaleString()}
+                    <strong>Hosted by:</strong>{" "}
+                    {eventItem.departmentName || eventItem.departmentId?.name || "Department"}
                   </p>
                   <p>
-                    <strong>End:</strong>{" "}
-                    {eventItem.endTime ? new Date(eventItem.endTime).toLocaleString() : "TBD"}
+                    <strong>Date & Time:</strong> {formatDateTime(eventItem.date)} -{" "}
+                    {eventItem.endTime ? formatDateTime(eventItem.endTime) : "TBD"}
                   </p>
                   <p>
                     <strong>Location:</strong> {eventItem.location}
@@ -401,13 +440,38 @@ function App() {
                     </button>
                   )}
                   {isOwnerDepartment && (
-                    <button
-                      className="danger-button"
-                      disabled={loading}
-                      onClick={() => handleDeleteEvent(eventItem._id)}
-                    >
-                      Delete Event
-                    </button>
+                    <>
+                      <button
+                        className="secondary-button attendees-toggle-button"
+                        disabled={loading}
+                        onClick={() => handleToggleAttendees(eventItem._id)}
+                      >
+                        {openAttendeesEventId === eventItem._id ? "Hide Attendees" : "View Attendees"}
+                      </button>
+                      <button
+                        className="danger-button"
+                        disabled={loading}
+                        onClick={() => handleDeleteEvent(eventItem._id)}
+                      >
+                        Delete Event
+                      </button>
+                    </>
+                  )}
+                  {isOwnerDepartment && openAttendeesEventId === eventItem._id && (
+                    <div className="attendees-box">
+                      <strong>Attendees</strong>
+                      {eventAttendees[eventItem._id]?.length ? (
+                        <ul className="attendees-list">
+                          {eventAttendees[eventItem._id].map((attendee) => (
+                            <li key={attendee.registrationId}>
+                              {attendee.name} ({attendee.email})
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>No attendees yet.</p>
+                      )}
+                    </div>
                   )}
                 </article>
               );
@@ -427,7 +491,7 @@ function App() {
                 <li key={registration._id}>
                   {registration.eventId?.title} -{" "}
                   {registration.eventId?.date
-                    ? new Date(registration.eventId.date).toLocaleString()
+                    ? formatDateTime(registration.eventId.date)
                     : "Event deleted"}
                 </li>
               ))}

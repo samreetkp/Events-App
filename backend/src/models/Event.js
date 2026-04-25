@@ -35,6 +35,11 @@ const eventSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    departmentName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
   },
   { timestamps: true }
 );

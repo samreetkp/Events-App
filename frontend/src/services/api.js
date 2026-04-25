@@ -55,6 +55,13 @@ export const api = {
     return handleResponse(response);
   },
 
+  getEventAttendees: async (eventId, token) => {
+    const response = await fetch(`${API_BASE_URL}/events/${eventId}/attendees`, {
+      headers: buildHeaders(token),
+    });
+    return handleResponse(response);
+  },
+
   registerForEvent: async (eventId, token) => {
     const response = await fetch(`${API_BASE_URL}/events/${eventId}/register`, {
       method: "POST",

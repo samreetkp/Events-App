@@ -1,5 +1,6 @@
 const Event = require("../models/Event");
 const Registration = require("../models/Registration");
+const User = require("../models/User");
 
 const registerForEvent = async (req, res) => {
   try {
@@ -49,4 +50,40 @@ const getMyRegistrations = async (req, res) => {
   }
 };
 
-module.exports = { registerForEvent, getMyRegistrations };
+const getEventAttendees = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const event = await Event.findById(eventId);
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    if (String(event.departmentId) !== String(req.user._id)) {
+      return res.status(403).json({ message: "You can only view attendees for your own events." });
+    }
+
+    const registrations = await Registration.find({ eventId }).select("studentId createdAt").lean();
+    const studentIds = registrations.map((registration) => registration.studentId);
+    const students = await User.find({ _id: { $in: studentIds } }).select("name email").lean();
+    const studentById = new Map(students.map((student) => [String(student._id), student]));
+
+    const attendees = registrations
+      .map((registration) => {
+        const student = studentById.get(String(registration.studentId));
+        if (!student) return null;
+        return {
+          registrationId: registration._id,
+          name: student.name,
+          email: student.email,
+        };
+      })
+      .filter(Boolean);
+
+    return res.status(200).json(attendees);
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to fetch attendees." });
+  }
+};
+
+module.exports = { registerForEvent, getMyRegistrations, getEventAttendees };
