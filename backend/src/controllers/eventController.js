@@ -3,25 +3,33 @@ const Registration = require("../models/Registration");
 
 const createEvent = async (req, res) => {
   try {
-    const { title, description, date, location, capacity } = req.body;
+    const { title, description, date, endTime, location, capacity } = req.body;
 
-    if (!title || !description || !date || !location || !capacity) {
+    if (!title || !description || !date || !endTime || !location || !capacity) {
       return res.status(400).json({ message: "All event fields are required." });
     }
 
     const eventDate = new Date(date);
+    const eventEndTime = new Date(endTime);
     if (Number.isNaN(eventDate.getTime())) {
       return res.status(400).json({ message: "Invalid event date." });
+    }
+    if (Number.isNaN(eventEndTime.getTime())) {
+      return res.status(400).json({ message: "Invalid event end time." });
     }
 
     if (eventDate <= new Date()) {
       return res.status(400).json({ message: "Event date must be in the future." });
+    }
+    if (eventEndTime <= eventDate) {
+      return res.status(400).json({ message: "Event end time must be after start time." });
     }
 
     const event = await Event.create({
       title,
       description,
       date: eventDate,
+      endTime: eventEndTime,
       location,
       capacity,
       departmentId: req.user._id,

@@ -102,6 +102,10 @@ button:disabled {
   color: #000000;
 }
 
+.auth-toggle-button {
+  margin-top: 0.75rem;
+}
+
 .danger-button {
   background: #000000;
   color: #ffffff;

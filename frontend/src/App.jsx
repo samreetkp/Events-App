@@ -7,6 +7,7 @@ const initialEventForm = {
   title: "",
   description: "",
   date: "",
+  endTime: "",
   location: "",
   capacity: 10,
 };
@@ -276,7 +277,7 @@ function App() {
                 </button>
               </form>
               <button
-                className="secondary-button"
+                className="secondary-button auth-toggle-button"
                 onClick={() => setMode((current) => (current === "login" ? "register" : "login"))}
               >
                 {mode === "login" ? "Need an account? Register" : "Already have an account? Login"}
@@ -315,12 +316,21 @@ function App() {
               }
               required
             />
-            <label>Date</label>
+            <label>Start Time</label>
             <input
               type="datetime-local"
               value={eventForm.date}
               onChange={(event) =>
                 setEventForm((current) => ({ ...current, date: event.target.value }))
+              }
+              required
+            />
+            <label>End Time</label>
+            <input
+              type="datetime-local"
+              value={eventForm.endTime}
+              onChange={(event) =>
+                setEventForm((current) => ({ ...current, endTime: event.target.value }))
               }
               required
             />
@@ -370,7 +380,11 @@ function App() {
                   <h3>{eventItem.title}</h3>
                   <p>{eventItem.description}</p>
                   <p>
-                    <strong>Date:</strong> {new Date(eventItem.date).toLocaleString()}
+                    <strong>Start:</strong> {new Date(eventItem.date).toLocaleString()}
+                  </p>
+                  <p>
+                    <strong>End:</strong>{" "}
+                    {eventItem.endTime ? new Date(eventItem.endTime).toLocaleString() : "TBD"}
                   </p>
                   <p>
                     <strong>Location:</strong> {eventItem.location}
