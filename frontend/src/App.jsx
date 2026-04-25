@@ -49,6 +49,9 @@ const combineDateAndTime = (dateValue, timeValue) => `${dateValue}T${timeValue}`
 
 function App() {
   const [activeTopSection, setActiveTopSection] = useState("");
+  const [isMobileView, setIsMobileView] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileActiveSection, setMobileActiveSection] = useState("");
   const [mode, setMode] = useState("login");
   const [authForm, setAuthForm] = useState(initialAuthForm);
   const [accountForm, setAccountForm] = useState(() => {
@@ -175,6 +178,16 @@ function App() {
     return () => clearTimeout(timeoutId);
   }, [message, error]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth <= 768);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const clearFeedback = () => {
     setError("");
     setMessage("");
@@ -202,6 +215,8 @@ function App() {
       setToken(payload.token);
       setUser(payload.user);
       setActiveTopSection("");
+      setMobileActiveSection("");
+      setIsMobileMenuOpen(false);
       setAccountForm({ name: payload.user.name, email: payload.user.email, password: "" });
       setAuthForm(initialAuthForm);
       setMessage(`Welcome, ${payload.user.name}.`);
@@ -415,6 +430,9 @@ function App() {
     setToken("");
     setUser(null);
     setAccountForm(initialAccountForm);
+    setActiveTopSection("");
+    setMobileActiveSection("");
+    setIsMobileMenuOpen(false);
     setMyRegistrations([]);
     setMessage("Logged out.");
     setError("");
@@ -455,6 +473,16 @@ function App() {
     setRegistrationInfoEvent(null);
   };
 
+  const openMobileSection = (section) => {
+    setMobileActiveSection((current) => (current === section ? "" : section));
+    setIsMobileMenuOpen(false);
+  };
+
+  const showAboutSection = isMobileView ? mobileActiveSection === "about" : activeTopSection === "about";
+  const showAuthSection = isMobileView ? mobileActiveSection === "auth" : activeTopSection === "auth";
+  const showMobileRegistrationsOnly = isMobileView && mobileActiveSection === "registrations" && isStudent;
+  const hideMainContentForMobileMenu = isMobileView && mobileActiveSection !== "";
+
   return (
     <main className="container">
       {(message || error) && (
@@ -489,32 +517,70 @@ function App() {
       )}
       <header className="top-nav">
         <h1>UniEvents</h1>
-        <nav>
-          <button
-            type="button"
-            className={`nav-link-button ${activeTopSection === "about" ? "active" : ""}`}
-            onClick={() =>
-              setActiveTopSection((current) => (current === "about" ? "" : "about"))
-            }
-          >
-            About
-          </button>
-          <button
-            type="button"
-            className={`nav-link-button ${activeTopSection === "auth" ? "active" : ""}`}
-            onClick={() => setActiveTopSection((current) => (current === "auth" ? "" : "auth"))}
-          >
-            {user ? "Account" : "Login"}
-          </button>
-          {user && (
-            <button type="button" className="nav-link-button" onClick={handleLogout}>
-              Logout
+        {isMobileView ? (
+          <div className="mobile-menu-wrapper">
+            <button
+              type="button"
+              className="mobile-menu-button"
+              onClick={() => setIsMobileMenuOpen((current) => !current)}
+            >
+              <span />
+              <span />
+              <span />
             </button>
-          )}
-        </nav>
+            {isMobileMenuOpen && (
+              <div className="mobile-menu-dropdown">
+                <button type="button" className="nav-link-button" onClick={() => openMobileSection("about")}>
+                  About
+                </button>
+                <button type="button" className="nav-link-button" onClick={() => openMobileSection("auth")}>
+                  {user ? "Account" : "Login"}
+                </button>
+                {isStudent && (
+                  <button
+                    type="button"
+                    className="nav-link-button"
+                    onClick={() => openMobileSection("registrations")}
+                  >
+                    My Registrations
+                  </button>
+                )}
+                {user && (
+                  <button type="button" className="nav-link-button" onClick={handleLogout}>
+                    Logout
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <nav>
+            <button
+              type="button"
+              className={`nav-link-button ${activeTopSection === "about" ? "active" : ""}`}
+              onClick={() =>
+                setActiveTopSection((current) => (current === "about" ? "" : "about"))
+              }
+            >
+              About
+            </button>
+            <button
+              type="button"
+              className={`nav-link-button ${activeTopSection === "auth" ? "active" : ""}`}
+              onClick={() => setActiveTopSection((current) => (current === "auth" ? "" : "auth"))}
+            >
+              {user ? "Account" : "Login"}
+            </button>
+            {user && (
+              <button type="button" className="nav-link-button" onClick={handleLogout}>
+                Logout
+              </button>
+            )}
+          </nav>
+        )}
       </header>
 
-      {activeTopSection === "about" && (
+      {showAboutSection && (
         <section id="about" className="panel">
           <h2>About</h2>
           <p>
@@ -524,7 +590,7 @@ function App() {
         </section>
       )}
 
-      {activeTopSection === "auth" && (
+      {showAuthSection && (
         <section id="auth" className="panel">
           {!user ? (
             <>
@@ -630,7 +696,53 @@ function App() {
         </section>
       )}
 
-      {isDepartment && (
+      {showMobileRegistrationsOnly && (
+        <section className="panel registrations-panel">
+          <h2>My Registrations</h2>
+          {myRegistrations.filter((registration) => !hiddenRegistrationIds.includes(registration._id))
+            .length === 0 ? (
+            <p>No registrations yet.</p>
+          ) : (
+            <ul className="registration-list">
+              {myRegistrations
+                .filter((registration) => !hiddenRegistrationIds.includes(registration._id))
+                .map((registration) => (
+                <li key={registration._id}>
+                  <div className="registration-row">
+                    <span>
+                      {registration.eventId?.title} -{" "}
+                      {registration.eventId?.date
+                        ? formatDateTime(registration.eventId.date)
+                        : "Event deleted"}
+                    </span>
+                    <div className="registration-actions">
+                      <button
+                        type="button"
+                        disabled={loading || !registration.eventId?._id}
+                        onClick={() =>
+                          registration.eventId?._id &&
+                          handleUnregisterFromEvent(registration.eventId._id)
+                        }
+                      >
+                        Unregister
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => handleShowRegistrationInfo(registration)}
+                      >
+                        More Info
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {!hideMainContentForMobileMenu && isDepartment && (
         <section className="panel">
           <h2>Create Event</h2>
           <form className="form" onSubmit={handleCreateEvent}>
@@ -704,7 +816,10 @@ function App() {
         </section>
       )}
 
-      {!user && <p className="login-register-hint">Login to register for events.</p>}
+      {!hideMainContentForMobileMenu && !user && (
+        <p className="login-register-hint">Login to register for events.</p>
+      )}
+      {!hideMainContentForMobileMenu && (
       <div className={`events-layout ${isStudent ? "student-events-layout" : ""}`}>
         {isStudent && (
           <section className="panel registrations-panel">
@@ -956,6 +1071,7 @@ function App() {
           )}
         </section>
       </div>
+      )}
 
     </main>
   );
