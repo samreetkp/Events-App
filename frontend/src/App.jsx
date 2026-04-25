@@ -12,6 +12,7 @@ const initialEventForm = {
 };
 
 function App() {
+  const [activeTopSection, setActiveTopSection] = useState("");
   const [mode, setMode] = useState("login");
   const [authForm, setAuthForm] = useState(initialAuthForm);
   const [eventForm, setEventForm] = useState(initialEventForm);
@@ -32,6 +33,10 @@ function App() {
   const registeredEventIds = useMemo(
     () => new Set(myRegistrations.map((registration) => registration.eventId?._id)),
     [myRegistrations]
+  );
+  const upcomingEvents = useMemo(
+    () => events.filter((eventItem) => new Date(eventItem.date) > new Date()),
+    [events]
   );
 
   const loadEvents = async () => {
@@ -184,79 +189,111 @@ function App() {
 
   return (
     <main className="container">
-      <h1>UniEvents</h1>
+      <header className="top-nav">
+        <h1>UniEvents</h1>
+        <nav>
+          <button
+            type="button"
+            className={`nav-link-button ${activeTopSection === "about" ? "active" : ""}`}
+            onClick={() =>
+              setActiveTopSection((current) => (current === "about" ? "" : "about"))
+            }
+          >
+            About
+          </button>
+          <button
+            type="button"
+            className={`nav-link-button ${activeTopSection === "auth" ? "active" : ""}`}
+            onClick={() => setActiveTopSection((current) => (current === "auth" ? "" : "auth"))}
+          >
+            {user ? "Account" : "Login"}
+          </button>
+        </nav>
+      </header>
 
-      <section className="panel">
-        {!user ? (
-          <>
-            <h2>{mode === "register" ? "Create Account" : "Login"}</h2>
-            <form className="form" onSubmit={handleAuthSubmit}>
-              {mode === "register" && (
-                <>
-                  <label>Name</label>
-                  <input
-                    value={authForm.name}
-                    onChange={(event) =>
-                      setAuthForm((current) => ({ ...current, name: event.target.value }))
-                    }
-                    required
-                  />
-                </>
-              )}
-              <label>Email</label>
-              <input
-                type="email"
-                value={authForm.email}
-                onChange={(event) =>
-                  setAuthForm((current) => ({ ...current, email: event.target.value }))
-                }
-                required
-              />
-              <label>Password</label>
-              <input
-                type="password"
-                value={authForm.password}
-                onChange={(event) =>
-                  setAuthForm((current) => ({ ...current, password: event.target.value }))
-                }
-                required
-              />
-              {mode === "register" && (
-                <>
-                  <label>Role</label>
-                  <select
-                    value={authForm.role}
-                    onChange={(event) =>
-                      setAuthForm((current) => ({ ...current, role: event.target.value }))
-                    }
-                  >
-                    <option value="student">Student</option>
-                    <option value="department">Department</option>
-                  </select>
-                </>
-              )}
-              <button type="submit" disabled={loading}>
-                {mode === "register" ? "Register" : "Login"}
+      {activeTopSection === "about" && (
+        <section id="about" className="panel">
+          <h2>About</h2>
+          <p>
+            UniEvents helps students discover upcoming university events and register in seconds,
+            while departments can publish and manage events in one place.
+          </p>
+        </section>
+      )}
+
+      {activeTopSection === "auth" && (
+        <section id="auth" className="panel">
+          {!user ? (
+            <>
+              <h2>{mode === "register" ? "Create Account" : "Login"}</h2>
+              <form className="form" onSubmit={handleAuthSubmit}>
+                {mode === "register" && (
+                  <>
+                    <label>Name</label>
+                    <input
+                      value={authForm.name}
+                      onChange={(event) =>
+                        setAuthForm((current) => ({ ...current, name: event.target.value }))
+                      }
+                      required
+                    />
+                  </>
+                )}
+                <label>Email</label>
+                <input
+                  type="email"
+                  value={authForm.email}
+                  onChange={(event) =>
+                    setAuthForm((current) => ({ ...current, email: event.target.value }))
+                  }
+                  required
+                />
+                <label>Password</label>
+                <input
+                  type="password"
+                  value={authForm.password}
+                  onChange={(event) =>
+                    setAuthForm((current) => ({ ...current, password: event.target.value }))
+                  }
+                  required
+                />
+                {mode === "register" && (
+                  <>
+                    <label>Role</label>
+                    <select
+                      value={authForm.role}
+                      onChange={(event) =>
+                        setAuthForm((current) => ({ ...current, role: event.target.value }))
+                      }
+                    >
+                      <option value="student">Student</option>
+                      <option value="department">Department</option>
+                    </select>
+                  </>
+                )}
+                <button type="submit" disabled={loading}>
+                  {mode === "register" ? "Register" : "Login"}
+                </button>
+              </form>
+              <button
+                className="secondary-button"
+                onClick={() => setMode((current) => (current === "login" ? "register" : "login"))}
+              >
+                {mode === "login" ? "Need an account? Register" : "Already have an account? Login"}
               </button>
-            </form>
-            <button
-              className="secondary-button"
-              onClick={() => setMode((current) => (current === "login" ? "register" : "login"))}
-            >
-              {mode === "login" ? "Need an account? Register" : "Already have an account? Login"}
-            </button>
-          </>
-        ) : (
-          <div className="row-between">
-            <p>
-              Signed in as <strong>{user.name}</strong> ({user.role})
-            </p>
-            <button className="secondary-button" onClick={handleLogout}>
-              Logout
-            </button>
-          </div>
-        )}
-      </section>
+            </>
+          ) : (
+            <div className="row-between">
+              <p>
+                Signed in as <strong>{user.name}</strong> ({user.role})
+              </p>
+              <button className="secondary-button" onClick={handleLogout}>
+                Logout
+              </button>
+            </div>
+          )}
+        </section>
+      )}
 
       {isDepartment && (
         <section className="panel">
@@ -319,11 +356,11 @@ function App() {
             Refresh
           </button>
         </div>
-        {events.length === 0 ? (
-          <p>No events yet.</p>
+        {upcomingEvents.length === 0 ? (
+          <p>No upcoming events yet.</p>
         ) : (
           <div className="event-list">
-            {events.map((eventItem) => {
+            {upcomingEvents.map((eventItem) => {
               const isRegistered = registeredEventIds.has(eventItem._id);
               const isFull = eventItem.spotsRemaining <= 0;
               const isOwnerDepartment =

@@ -4,6 +4,41 @@
   padding: 2rem 1rem 3rem;
 }
 
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #000000;
+  padding-bottom: 0.75rem;
+}
+
+.top-nav h1 {
+  margin: 0;
+}
+
+.top-nav nav {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.nav-link-button {
+  text-decoration: none;
+  background: #000000;
+  color: #cfb87c;
+  border: 1px solid #cfb87c;
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nav-link-button:hover,
+.nav-link-button.active {
+  background: #cfb87c;
+  color: #000000;
+}
+
 .panel {
   background: #ffffff;
   border: 1px solid #cfb87c;
