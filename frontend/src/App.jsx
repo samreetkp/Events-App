@@ -494,6 +494,7 @@ function App() {
   const showAboutSection = isMobileView ? mobileActiveSection === "about" : activeTopSection === "about";
   const showAuthSection = isMobileView ? mobileActiveSection === "auth" : activeTopSection === "auth";
   const showMobileRegistrationsOnly = isMobileView && mobileActiveSection === "registrations" && isStudent;
+  const showMobileCreateEventOnly = isMobileView && mobileActiveSection === "create-event" && isDepartment;
   const hideMainContentForMobileMenu = isMobileView && mobileActiveSection !== "";
 
   return (
@@ -558,6 +559,15 @@ function App() {
                     onClick={() => openMobileSection("registrations")}
                   >
                     My Registrations
+                  </button>
+                )}
+                {isDepartment && (
+                  <button
+                    type="button"
+                    className="nav-link-button"
+                    onClick={() => openMobileSection("create-event")}
+                  >
+                    Create Event
                   </button>
                 )}
                 {user && (
@@ -759,6 +769,79 @@ function App() {
           )}
         </section>
       )}
+      {showMobileCreateEventOnly && (
+        <section className="panel create-event-panel">
+          <h2>Create Event</h2>
+          <form className="form" onSubmit={handleCreateEvent}>
+            <label>Title</label>
+            <input
+              value={eventForm.title}
+              onChange={(event) =>
+                setEventForm((current) => ({ ...current, title: event.target.value }))
+              }
+              required
+            />
+            <label>Description</label>
+            <textarea
+              value={eventForm.description}
+              onChange={(event) =>
+                setEventForm((current) => ({ ...current, description: event.target.value }))
+              }
+              required
+            />
+            <label>Date</label>
+            <input
+              type="date"
+              value={eventForm.eventDate}
+              onChange={(event) =>
+                setEventForm((current) => ({ ...current, eventDate: event.target.value }))
+              }
+              required
+            />
+            <label>Start Time</label>
+            <input
+              type="time"
+              value={eventForm.startTime}
+              onChange={(event) =>
+                setEventForm((current) => ({ ...current, startTime: event.target.value }))
+              }
+              required
+            />
+            <label>End Time</label>
+            <input
+              type="time"
+              value={eventForm.endTime}
+              onChange={(event) =>
+                setEventForm((current) => ({ ...current, endTime: event.target.value }))
+              }
+              required
+            />
+            <label>Location</label>
+            <input
+              value={eventForm.location}
+              onChange={(event) =>
+                setEventForm((current) => ({ ...current, location: event.target.value }))
+              }
+              required
+            />
+            <label>Event Photo</label>
+            <input type="file" accept="image/*" onChange={handleEventPhotoChange} />
+            <label>Capacity</label>
+            <input
+              type="number"
+              min="1"
+              value={eventForm.capacity}
+              onChange={(event) =>
+                setEventForm((current) => ({ ...current, capacity: event.target.value }))
+              }
+              required
+            />
+            <button type="submit" disabled={loading}>
+              Create Event
+            </button>
+          </form>
+        </section>
+      )}
 
       {!hideMainContentForMobileMenu && !user && (
         <p className="login-register-hint">Login to register for events.</p>
@@ -769,7 +852,7 @@ function App() {
           isDepartment && !isStudent ? "department-events-layout" : ""
         }`}
       >
-        {isStudent && (
+        {isStudent && !isMobileView && (
           <section className="panel registrations-panel">
             <h2>My Registrations</h2>
             {myRegistrations.filter((registration) => !hiddenRegistrationIds.includes(registration._id))
@@ -1023,7 +1106,7 @@ function App() {
             </div>
           )}
         </section>
-        {isDepartment && (
+        {isDepartment && !isMobileView && (
           <section className="panel create-event-panel">
             <h2>Create Event</h2>
             <form className="form" onSubmit={handleCreateEvent}>

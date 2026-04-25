@@ -6,10 +6,10 @@
 
 .toast-message {
   position: fixed;
-  top: 1rem;
+  top: 0.6rem;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 1000;
+  z-index: 2000;
   min-width: 260px;
   max-width: min(90vw, 560px);
   border-radius: 10px;
@@ -205,6 +205,16 @@ select:focus {
   outline-offset: 1px;
 }
 
+input[type="date"],
+input[type="time"] {
+  accent-color: #cfb87c;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: sepia(1) saturate(5) hue-rotate(350deg) brightness(0.9);
+}
+
 .read-only-input {
   background: #ececec;
   color: #5a5a5a;
@@ -364,6 +374,14 @@ button:disabled {
 .registration-list {
   margin: 0;
   padding-left: 1rem;
+}
+
+.registration-list li {
+  margin-bottom: 0.45rem;
+}
+
+.registration-list li:last-child {
+  margin-bottom: 0;
 }
 
 .registration-row {
